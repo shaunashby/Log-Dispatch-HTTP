@@ -1,52 +1,201 @@
-Log-Dispatch-HTTP
+NAME
+       Log::Dispatch::HTTP − A dispatch module for the Log::Log4perl logging
+       framework which logs messages to a web application.
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+VERSION
+       0.01
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+SYNOPSIS
+           use Log::Log4perl qw(get_logger :levels);
 
+           my $logconf.=qq/
+               log4perl.logger.Notifications=INFO, Http
+               log4perl.appender.Http=Log::Dispatch::HTTP
+               log4perl.appender.Http.layout=Log::Log4perl::Layout::PatternLayout
+               log4perl.appender.Http.layout.ConversionPattern=mode=%m&P1=%X{P1}&P2=%X{P2}&P3=%X{P3}
+               log4perl.appender.Http.server=127.0.0.1:3000
+               log4perl.appender.Http.actionURL=a\/b\/notifyme
+               log4perl.appender.Http.timeout=30
+               log4perl.appender.Http.sessionkey=2A8B9880‐B1B0‐46EB‐AE10‐B9E99E3FFAA6/;
+           /;
 
-INSTALLATION
+           Log::Log4perl‐>init(\$logconf);
 
-To install this module, run the following commands:
+           my $notifications = get_logger("Notifications");
+           $notifications‐>info("did something interesting");
 
-	perl Makefile.PL
-	make
-	make test
-	make install
+DESCRIPTION
+       This module provides logging to a web application within the
+       Log::Log4perl framework. It can be used in the same way as the other
+       Log::Dispatch modules, for example
 
-SUPPORT AND DOCUMENTATION
+           Log::Dispatch::Email
+           Log::Dispatch::File
 
-After installing, you can find documentation for this module with the
-perldoc command.
+       and only in the context of Log::Log4perl.
 
-    perldoc Log::Dispatch::HTTP
+       The following configuration illustrates how to have messages passed to
+       Log::Dispatch::HTTP. First, set up to use Log::Log4perl for all appli‐
+       cation logging:
 
-You can also look for information at:
+           use Log::Log4perl qw(get_logger :levels);
 
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Log-Dispatch-HTTP
+       Configure two loggers: one root logger for main application logging to
+       standard output or a log file where all messages at level WARN or above
+       will be dispatched:
 
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Log-Dispatch-HTTP
+           my $logconf=qq/log4perl.logger.Application=WARN, Log, Screen/;
 
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Log-Dispatch-HTTP
+       and a second for the notifications to a web server where an application
+       is listening for requests. Call the logger "Notifications" (arbitrary,
+       but sensible name):
 
-    Search CPAN
-        http://search.cpan.org/dist/Log-Dispatch-HTTP/
+           $logconf.=qq/log4perl.logger.Notifications=INFO, Http/;
 
+       Now add the configuration for the root appender modules:
 
-COPYRIGHT AND LICENCE
+           $logconf.=qq/
+               log4perl.appender.Screen=Log::Dispatch::Screen
+               log4perl.appender.Screen.stderr=1
+               log4perl.appender.Screen.name=pixelisation
+               log4perl.appender.Screen.Threshold=Debug
+               log4perl.appender.Screen.layout=Log::Log4perl::Layout::PatternLayout
+               log4perl.appender.Screen.layout.ConversionPattern=[ %d %p ]> %m%n
+               log4perl.appender.Log=Log::Dispatch::File
+               log4perl.appender.Log.filename=pixelisation.log
+               log4perl.appender.Log.mode=append
+               log4perl.appender.Log.layout=Log::Log4perl::Layout::PatternLayout
+               log4perl.appender.Log.layout.ConversionPattern=%d %p> %M ‐ %m%n/;
 
-Copyright (C) 2009 "Shaun ASHBY"
+       The configuration for the notification logger looks like this:
 
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+           $logconf.=qq/
+               log4perl.appender.Http=Log::Dispatch::HTTP
+               log4perl.appender.Http.layout=Log::Log4perl::Layout::PatternLayout
+               log4perl.appender.Http.layout.ConversionPattern=mode=%m&P1=%X{P1}&P2=%X{P2}&P3=%X{P3}
+               log4perl.appender.Http.server=127.0.0.1:3000
+               log4perl.appender.Http.actionURL=a\/b\/notifyme
+               log4perl.appender.Http.timeout=30
+               log4perl.appender.Http.sessionkey=2A8B9880‐B1B0‐46EB‐AE10‐B9E99E3FFAA6/;
+
+       In the Http PatternLayout above,
+
+       mode
+           A switch which can be passed as a parameter to the listening web
+           application so any number of actions can be defined. This will be
+           set to the value of the message passed into the logging method
+           (%m).
+
+       %X{N}
+           The value of N is expanded by Log4perl automatically; %X is the
+           pattern for values obtained from the context Log::Log4perl::MDC.
+           Values should first be stored in the context like this
+
+                Log::Log4perl::MDC‐>put(’P1’,$value);
+
+       server
+           The server where the web application is running.
+
+       actionURL 
+           The URL of the action to be requested, receiving the parameters
+           setup in the message via the ConversionPattern.
+
+       timeout
+           The timeout for the HTTP::Request to the server. Default is 30s.
+
+       sessionkey
+           An arbitrary key which could be checked on the server‐side for ele‐
+           mentary client authorisation.
+
+       The format of the ConversionPattern above is completely arbitrary and
+       can be tailored to suit, depending on what information should be sent
+       to the web application.
+
+       Finally, initialise Log::Log4perl in your application:
+
+           Log::Log4perl‐>init(\$logconf);
+
+       and use the root logger via
+
+           my $logger = get_logger("Application");
+
+       For notifications, use the logger with the name "Notifications" as con‐
+       figured above and send using the info() level:
+
+           my $notifications = get_logger("Notifications");
+           $notifications‐>info("did something interesting");
+
+       Please see the documentation for Log::Log4perl and Log::Dispatch for
+       more general information on logging in applications.
+
+METHODS
+       new(%param)
+           Constructor used indirectly via the internal Log::Log4perl::Appen‐
+           der configuration.
+
+       _init(%param)
+           Internal initialisation method. Read and store configuration infor‐
+           mation.
+
+       log_message(%param)
+           Overrides the logging method in Log::Dispatch::Output. Called auto‐
+           matically by the loggers.
+
+TO DO
+       In the above example, two loggers have been configured. However, it
+       should also be possible to create a custom level in Log::Log4perl and
+       have all notifications handled like this
+
+           $logger‐>custom_("message to custom function");
+
+       with only one root logger.
+
+BUGS
+       Please report any bugs or feature requests to "bug−log−dispatch−http at
+       rt.cpan.org", or through the web interface at
+       <http://rt.cpan.org/NoAuth/ReportBug.html?Queue=Log−Dispatch−HTTP>.  I
+       will be notified, and then you’ll automatically be notified of progress
+       on your bug as I make changes.
+
+SUPPORT
+       You can find documentation for this module with the perldoc command.
+
+           perldoc Log::Dispatch::HTTP
+
+       You can also look for information at:
+
+       * RT: CPAN’s request tracker
+           <http://rt.cpan.org/NoAuth/Bugs.html?Dist=Log−Dispatch−HTTP>
+
+       * AnnoCPAN: Annotated CPAN documentation
+           <http://annocpan.org/dist/Log−Dispatch−HTTP>
+
+       * CPAN Ratings
+           <http://cpanratings.perl.org/d/Log−Dispatch−HTTP>
+
+       * Search CPAN
+           <http://search.cpan.org/dist/Log−Dispatch−HTTP/>
+
+ACKNOWLEDGEMENTS
+       This module was developed with a close eye on the documentation and
+       code of Log::Dispatch::XX (for many different values of XX). Thanks to
+       the authors for developing those modules.
+
+AUTHOR
+       Shaun Ashby <shaun.ashby@gmail.com>
+
+COPYRIGHT
+       Copyright (c) 2009 Shaun Ashby.  All rights reserved.  This program is
+       free software; you can redistribute it and/or modify it under the same
+       terms as Perl itself.
+
+       The full text of the license can be found in the LICENSE file included
+       with this module.
+
+SEE ALSO
+       Log::Dispatch::ApacheLog, Log::Dispatch::Email, Log::Dis‐
+       patch::Email::MailSend, Log::Dispatch::Email::MailSender, Log::Dis‐
+       patch::Email::MailSendmail, Log::Dispatch::Email::MIMELite, Log::Dis‐
+       patch::File, Log::Dispatch::File::Locked, Log::Dispatch::Handle,
+       Log::Dispatch::Output, Log::Dispatch::Screen, Log::Dispatch::Syslog
 
