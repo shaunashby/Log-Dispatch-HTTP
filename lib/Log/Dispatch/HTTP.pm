@@ -16,8 +16,8 @@ Log::Dispatch::HTTP - A dispatch module for the Log::Log4perl logging framework 
 =head1 SYNOPSIS
 
     use Log::Log4perl qw(get_logger :levels);
-
-    my $logconf.=qq/
+   
+    my $logconf=qq/
         log4perl.logger.Notifications=INFO, Http
         log4perl.appender.Http=Log::Dispatch::HTTP
         log4perl.appender.Http.layout=Log::Log4perl::Layout::PatternLayout
@@ -25,7 +25,7 @@ Log::Dispatch::HTTP - A dispatch module for the Log::Log4perl logging framework 
         log4perl.appender.Http.server=127.0.0.1:3000
         log4perl.appender.Http.actionURL=a\/b\/notifyme
         log4perl.appender.Http.timeout=30
-        log4perl.appender.Http.sessionkey=2A8B9880-B1B0-46EB-AE10-B9E99E3FFAA6/;
+        log4perl.appender.Http.sessionkey=2A8B9880-B1B0-46EB-AE10-B9E99E3FFAA6
     /;
 
     Log::Log4perl->init(\$logconf);
