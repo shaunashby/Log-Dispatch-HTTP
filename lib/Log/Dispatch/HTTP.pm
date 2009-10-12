@@ -81,7 +81,7 @@ The configuration for the notification logger looks like this:
         log4perl.appender.Http.layout.ConversionPattern=mode=%m&P1=%X{P1}&P2=%X{P2}&P3=%X{P3}
         log4perl.appender.Http.server=127.0.0.1:3000
         log4perl.appender.Http.actionURL=a\/b\/notifyme
-        log4perl.appender.Http.timeout=30        
+        log4perl.appender.Http.timeout=30    
         log4perl.appender.Http.sessionkey=2A8B9880-B1B0-46EB-AE10-B9E99E3FFAA6/;
 
 In the Http PatternLayout above,
@@ -116,6 +116,11 @@ The timeout for the HTTP::Request to the server. Default is 30s.
 
 An arbitrary key which could be checked on the server-side for elementary client authorisation.
 
+=item B<testmode>
+
+An optional flag to turn on test mode. In this mode, the URL and parameters for the POST request
+to the destination server will be logged to STDOUT. No actual request will be sent.
+
 =back
 
 The format of the ConversionPattern above is completely arbitrary and can be tailored to suit, depending on what
@@ -146,12 +151,39 @@ use base qw(Log::Dispatch::Output);
 
 =head1 METHODS
 
-=over *
+=over
     
 =item new(%param)
 
-Constructor used indirectly via the internal Log::Log4perl::Appender configuration.
-	
+Constructor used indirectly via the internal Log::Log4perl::Appender configuration. The constructor takes
+a hash containing parameters. The usual parameters are
+
+=over 8
+
+=item * name ($)
+
+The name of the object. This is required.
+
+=item * min_level ($)
+
+The minimum logging level this object will accept.  See the
+Log::Dispatch documentation on L<Log Levels|Log::Dispatch/"Log Levels"> for more information.  
+This is required.
+
+=item * max_level ($)
+
+The maximum logging level this obejct will accept.  See the
+Log::Dispatch documentation on L<Log Levels|Log::Dispatch/"Log Levels"> for more information.
+
+=item * callbacks( \& or [ \&, \&, ... ] )
+
+This parameter may be a single subroutine reference or an array
+reference of subroutine references.  These callbacks will be called in
+the order they are given and passed a hash containing the "message" and
+"level" parameters.
+
+=back
+
 =cut
 sub new() {
 	my $proto = shift;
@@ -186,15 +218,18 @@ sub _init() {
 	$self->{min_level} = 1;
 	$self->{max_level} = 1;
 	# Set default timeout if not already set:
-	$self->{TIMEOUT} = 30 unless (exists($self->{TIMEOUT}) && $self->{TIMEOUT} > 0 );	
+	$self->{TIMEOUT} = 30 unless (exists($self->{TIMEOUT}) && $self->{TIMEOUT} > 0 );
+	# Set session key to NULL if not already set to something that looks like a UUID:
+	$self->{SESSIONKEY} = 'NULL' unless (exists($self->{SESSIONKEY}) && length($self->{SESSIONKEY}) > 10 );
 	# Build the URL:
-	$self->{URL} = sprintf("http://%s/%s",$self->{SERVER},$self->{ACTIONURL});	
+	$self->{URL} = sprintf("http://%s/%s",$self->{SERVER},$self->{ACTIONURL});
+
 	# Create user agent:
 	do {
-		$self->{UA} = LWP::UserAgent->new;
-		$self->{UA}->agent(__PACKAGE__."/$VERSION\n");
-		$self->{UA}->timeout($self->{TIMEOUT}); # Just in case server goes bye-byes
-	} unless (defined($self->{UA}));
+		$self->{USER_AGENT} = LWP::UserAgent->new;
+		$self->{USER_AGENT}->agent(__PACKAGE__."/$VERSION\n");
+		$self->{USER_AGENT}->timeout($self->{TIMEOUT}); # Just in case server goes bye-byes
+	} unless (defined($self->{USER_AGENT}));
 
 }
 
@@ -204,22 +239,31 @@ Overrides the logging method in Log::Dispatch::Output. Called automatically by t
 
 =cut
 sub log_message() {
-	my $self = shift;
-	my (%param) = @_;
-	# Request parameters. The message string is created by the Log4perl infrastructure
-	# (PatternLayouts and the values in the MDC):
-	$self->{PARAMS} = sprintf("SESSIONKEY=%s&%s",$self->{SESSIONKEY},$param{message});
-	# Create an HTTP request and POST to the server
-	my $req = HTTP::Request->new(POST => $self->{URL});
-    $req->content_type('application/x-www-form-urlencoded');
-    # Set the parameters for the POST request:
-    $req->content($self->{PARAMS});
-    # Pass request to the user agent and get a response back:
-    my $res = $self->{UA}->request($req);
+    my $self = shift;
+    my (%param) = @_;
+    # Request parameters. The message string is created by the Log4perl infrastructure
+    # (PatternLayouts and the values in the MDC):
+    $self->{PARAMS} = sprintf("SESSIONKEY=%s&%s",$self->{SESSIONKEY},$param{message});
+    
+    # Check for test mode. If test mode is set, create a "message" from the URL and parameters,
+    # then call default dispatcher:
+    if ($self->{TESTMODE}) {
+        $self->{TESTMODE_MESSAGE} = sprintf("Test mode: URL=%s",$self->{URL});   
+        $self->{TESTMODE_MESSAGE} .= sprintf("Param: %s",$self->{PARAMS});
+        $self->SUPER::log_message( level => 'debug', message => $self->{TESTMODE_MESSAGE} );
+    } else {    
+        # Create an HTTP request and POST to the server
+        my $req = HTTP::Request->new(POST => $self->{URL});
+        $req->content_type('application/x-www-form-urlencoded');
+        # Set the parameters for the POST request:
+        $req->content($self->{PARAMS});
+        # Pass request to the user agent and get a response back:
+        my $res = $self->{USER_AGENT}->request($req);
 
-    if (!$res->is_success) {
-		print STDERR __PACKAGE__.": Problem sending notification to ".$self->{SERVER}.".\n";
-		print STDERR __PACKAGE__.": ".$res->status_line."\n";
+        if (!$res->is_success) {
+	       print STDERR __PACKAGE__.": Problem sending notification to ".$self->{SERVER}.".\n";
+	       print STDERR __PACKAGE__.": ".$res->status_line."\n";
+        }
     }
 }
 

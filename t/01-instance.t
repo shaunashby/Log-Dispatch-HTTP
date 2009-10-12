@@ -1,13 +1,16 @@
 #!perl
 
-use Test::More tests => 1;
+use Test::More tests => 4;
 
 BEGIN {
-	    use_ok( 'Log::Log4perl' );
-        use_ok( 'Log::Dispatch::HTTP' );
+    use_ok( 'Log::Log4perl' );
+    use_ok( 'Log::Dispatch::HTTP' );
 }
 
-my $n = Log::Dispatch::HTTP->new( );
+# Base class dispatcher:
+my $dispatch = Log::Dispatch->new;
+ok(defined($dispatch), "Created Log::Dispatch object" );
 
-ok(defined($n) && ref($n) eq 'Log::Dispatch::HTTP',"Construction works");
-
+# HTTP Dispatcher:
+my $n = Log::Dispatch::HTTP->new( min_level => 'info', name => 'myLogger' );
+ok(defined($n) && ref($n) eq 'Log::Dispatch::HTTP',"Construction of Log::Dispatch::HTTP object works");

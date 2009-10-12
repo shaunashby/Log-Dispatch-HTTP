@@ -1,3 +1,4 @@
+
 NAME
        Log::Dispatch::HTTP − A dispatch module for the Log::Log4perl logging
        framework which logs messages to a web application.
@@ -96,7 +97,7 @@ DESCRIPTION
        server
            The server where the web application is running.
 
-       actionURL 
+       actionURL
            The URL of the action to be requested, receiving the parameters
            setup in the message via the ConversionPattern.
 
@@ -106,6 +107,11 @@ DESCRIPTION
        sessionkey
            An arbitrary key which could be checked on the server‐side for ele‐
            mentary client authorisation.
+
+       testmode
+           An optional flag to turn on test mode. In this mode, the URL and
+           parameters for the POST request to the destination server will be
+           logged to STDOUT. No actual request will be sent.
 
        The format of the ConversionPattern above is completely arbitrary and
        can be tailored to suit, depending on what information should be sent
@@ -131,7 +137,27 @@ DESCRIPTION
 METHODS
        new(%param)
            Constructor used indirectly via the internal Log::Log4perl::Appen‐
-           der configuration.
+           der configuration. The constructor takes a hash containing parame‐
+           ters. The usual parameters are
+
+           * name ($)
+                   The name of the object. This is required.
+
+           * min_level ($)
+                   The minimum logging level this object will accept.  See the
+                   Log::Dispatch documentation on Log Levels for more informa‐
+                   tion.  This is required.
+
+           * max_level ($)
+                   The maximum logging level this obejct will accept.  See the
+                   Log::Dispatch documentation on Log Levels for more informa‐
+                   tion.
+
+           * callbacks( \& or [ \&, \&, ... ] )
+                   This parameter may be a single subroutine reference or an
+                   array reference of subroutine references.  These callbacks
+                   will be called in the order they are given and passed a
+                   hash containing the "message" and "level" parameters.
 
        _init(%param)
            Internal initialisation method. Read and store configuration infor‐
