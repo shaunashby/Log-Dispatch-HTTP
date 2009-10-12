@@ -248,9 +248,9 @@ sub log_message() {
     # Check for test mode. If test mode is set, create a "message" from the URL and parameters,
     # then call default dispatcher:
     if ($self->{TESTMODE}) {
-        $self->{TESTMODE_MESSAGE} = sprintf("Test mode: URL=%s",$self->{URL});   
-        $self->{TESTMODE_MESSAGE} .= sprintf("Param: %s",$self->{PARAMS});
-        $self->SUPER::log_message( level => 'debug', message => $self->{TESTMODE_MESSAGE} );
+        $self->{TESTMODE_MESSAGE} = sprintf("Test mode: URL=%s ",$self->{URL});   
+        $self->{TESTMODE_MESSAGE} .= sprintf("Params: %s",$self->{PARAMS});
+	print STDOUT __PACKAGE__." ".$self->{TESTMODE_MESSAGE}."\n";
     } else {    
         # Create an HTTP request and POST to the server
         my $req = HTTP::Request->new(POST => $self->{URL});
@@ -261,8 +261,8 @@ sub log_message() {
         my $res = $self->{USER_AGENT}->request($req);
 
         if (!$res->is_success) {
-	       print STDERR __PACKAGE__.": Problem sending notification to ".$self->{SERVER}.".\n";
-	       print STDERR __PACKAGE__.": ".$res->status_line."\n";
+	    print STDERR __PACKAGE__.": Problem sending notification to ".$self->{SERVER}.".\n";
+	    print STDERR __PACKAGE__.": ".$res->status_line."\n";
         }
     }
 }
@@ -274,7 +274,7 @@ sub log_message() {
 In the above example, two loggers have been configured. However, it should also be possible to create a custom level
 in Log::Log4perl and have all notifications handled like this
 
-    $logger->custom_("message to custom function");
+    $logger->custom("message to custom function");
 
 with only one root logger.
     

@@ -12,5 +12,5 @@ my $dispatch = Log::Dispatch->new;
 ok(defined($dispatch), "Created Log::Dispatch object" );
 
 # HTTP Dispatcher:
-my $n = Log::Dispatch::HTTP->new( min_level => 'info', name => 'myLogger' );
+my $n = Log::Dispatch::HTTP->new( min_level => 'info', name => 'myLogger', server => 'localhost', actionURL => '/notify' );
 ok(defined($n) && ref($n) eq 'Log::Dispatch::HTTP',"Construction of Log::Dispatch::HTTP object works");
