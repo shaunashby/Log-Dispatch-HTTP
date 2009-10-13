@@ -1,8 +1,13 @@
 Changes
-MANIFEST
-Makefile.PL
-README
 lib/Log/Dispatch/HTTP.pm
+Makefile.PL
+MANIFEST
+README
 t/00-load.t
+t/01-instance.t
+t/02-using-dispatch.t
+t/03-using-log4perl.t
+t/04-using-callbacks.t
+t/boilerplate.t
 t/pod-coverage.t
 t/pod.t
